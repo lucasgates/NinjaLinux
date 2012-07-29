@@ -1,0 +1,5 @@
+03/17-18:41:24.945891  [**] [1:100000160:2] Snort Alert [1:100000160:0] [**] [Classification: Attempted Denial of Service] [Priority: 2] {TCP} 192.168.1.64:20 -> 86.183.217.14:59691
+03/17-18:41:25.171537  [**] [1:100000160:2] Snort Alert [1:100000160:0] [**] [Classification: Attempted Denial of Service] [Priority: 2] {TCP} 86.183.217.14:59691 -> 192.168.1.64:20
+03/17-18:46:27.127963  [**] [1:100000160:2] Snort Alert [1:100000160:0] [**] [Classification: Attempted Denial of Service] [Priority: 2] {TCP} 86.183.217.14:62549 -> 192.168.1.64:20
+03/17-18:46:27.206756  [**] [1:100000160:2] Snort Alert [1:100000160:0] [**] [Classification: Attempted Denial of Service] [Priority: 2] {TCP} 192.168.1.64:20 -> 86.183.217.14:62549
+03/17-18:46:27.206756  [**] [1:100000160:2] Snort Alert [1:100000160:0] [**] [Classification: SQL Injection] [Priority: 3] {TCP} 192.168.1.64:20 -> 86.183.217.14:62549

