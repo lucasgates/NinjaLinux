@@ -13,6 +13,7 @@ apt-get -y install labrea
 apt-get -y install subversion
 apt-get -y install libssl-dev
 apt-get -y install upx
+apt-get -y install yersinia
 apt-get -y install python-twisted-conch
 svn co http://trac.aircrack-ng.org/svn/trunk/ tools/aircrack-ng
 cd tools/aircrack-ng 
