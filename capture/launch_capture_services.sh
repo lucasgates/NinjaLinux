@@ -15,8 +15,7 @@ echo "    * sip"
 echo "    * telnet"
 echo "    * vnc"
 
-echo "This isn't useful yet..."
-exit
+echo "This isn't useful yet... Keep working"
 
 
 use auxiliary/server/capture/pop3

